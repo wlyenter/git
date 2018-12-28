@@ -1,0 +1,220 @@
+一.编程
+    1.socket
+        认知：网络套接字，网络通信的基本手段，有tcp/udp/组播模式，分server（bind、accept）与client（connect），
+        1.tcp/ip规定网络字节流采用大端字节序，即低地址--高字节
+        
+        2.网络字节序的转换::
+            端口port::
+            ntohs()                             //网络字节序转主机字节序
+            ntohl()
+            htons()                             //主机字节序转网络字节序
+            htonl()
+            IP转换::
+            inet_aton                           //将字符串ip转换成无符号长整型,并转换成网络字节序
+            inet_addr("*.*.*.*")                //将字符串ip转换成无符号长整型(unsigned long int)，并转换成网络字节序。
+            inet_htoa(addr.sin_addr.s_addr);    //将网络字节序的ip转换成"*.*.*.*"形式。
+            inet_pton                           //将点分十进制数ip地址转换陈32位二进制网络地址
+            inet_ntop                           //将32为二进制ip地址转换为点分十进制ip地址
+        3.网络地址一般被绑定到socket描述符上。 编程人员一般是用
+            struct sockaddr_in
+            {
+                short int sin_family,           //一般为AF_INET和socket的第一个参数取值一样，不用网络字节序，它只会进入linux内核。
+                unsigned short int sin_port,    //使用htons和ntohs进行字节序转换。
+                struct in_addr sin_addr;        /*   struct in_addr{unsigned int s_addr};
+                                                  一般使用,inet_addr("*.*.*.*");和inet_htoa( addr.sin_addr.s_addr);进行相互转换*/
+                unsigned char sin_zero[8];      //为了和struct sockaddr大小相等，使用memset全出设为0.              
+            }
+        4.socket编程常用的头文件::
+            #include <sys/socket.h>
+            #include <sys/types.h>
+            #include <netdb.h>  
+        
+        5.创建socket描述符::
+            int   socket(int domain,int type,int protocol);
+            实际编程::
+            domain 取值为       AF_INET
+            type取值为          SOCK_STREAM(流式套接字，TCP)          SOCK_DGRAM(数据报套接字，UDP)
+            protocol取值为      0
+
+        5、绑定，将“网络地址”和socket描述符绑定在一起::
+            int   bind(int sockfd,strcut sockaddr *myaddr,int addrlen);
+            实际编程::
+            sockfd                          // socket的返回值，即socket描述符。
+            struct sockaddr_in myaddr       //构建网络地址。
+            my_addr.sin_family = AF_INET;
+            my_addr.sin_port  = htons(PORT);
+            my_addr.sin_addr.s_addr = inet_addr(IP);
+            memset(my_addr.sin_zero,'\0',sizeof(my_addr.sin_zero));
+            addrlen                         //sizeof(struct sockaddr_in);
+
+        6、监听，即设置等待队列的大小::（仅使用于SOCK_STREAM形式的socket）
+            int  listen(int sockfd,int backlog);    //用于设置等待队列的大小,backlog的常用取值为5~10
+
+        后面还有::
+            accept                  (SOCK_STREAM)
+            connect
+            send
+            recv
+            sendto                  (SOCK_DGRAM)
+            recvfrom
+            close                   (关闭socke描述符)
+            shutdown                (有选择的关闭socket描述符)
+        tcp/udp/unix域/netlink
+        tcp连接的三次握手
+        tcp断开的四次挥手
+    2.select
+        认知：网络阻塞触发的手段
+    3.poll/epoll
+
+二.框架
+三.问题
+
+一切的学习都是为了解决问题，而不是为了学习而学习
+进程/线程
+1.  Linux进程和线程如何创建、退出？进程退出的时候，自己没有释放的资源（如内存没有free）会怎样？
+    我的解释：进程通过fork，线程通过pthread_create创建，  进程退出时内核会处理释放内存资源，因为进程创建时有一个task_struct，包含了内存资源信息
+
+2.  什么是写时拷贝？
+    我的解释：在fork时，子进程分裂出相同的mm，父子进程哪个优先写时，将mm拷贝到新的地址空间
+
+3.  Linux的线程如何实现，与进程的本质区别是什么？
+    我的解释：通过pthread_create创建，与进程本质是进程分裂出mm，而线程指向同一个mm
+
+4.  Linux能否满足硬实时的需求？
+    我的解释：不能满足，不满足硬实时的抢占的可预期性
+
+5.  进程如何睡眠等资源，此后又如何被唤醒？
+
+6.  进程的调度延时是多少？
+
+7.  调度器追求的吞吐率和响应延迟之间是什么关系？CPU消耗型和I/O消耗型进程的诉求？
+
+8.  Linux怎么区分进程优先级？实时的调度策略和普通调度策略有什么区别？
+
+9.  nice值的作用是什么？nice值低有什么优势？
+    我的解释：nice值影响进程的运行时间，nice值底，进程的权重越大，分到的运行时间越多 
+
+10. Linux可以被改造成硬实时吗？有什么方案？
+    我的解释：linux中不可抢占的有中断，软中断，加了spin_lock的进程，将中断、软中断当作一个线程去处理且将spin_lock锁替换成mutux锁，即可满足硬实时的抢占的可预期性
+
+11. 多核、多线程的情况下，Linux如何实现进程的负载均衡？
+
+12. 这么多线程，究竟哪个线程在哪个CPU核上跑？有没有办法把某个线程固定到某个CPU跑？
+
+13. 多核下如何实现中断、软中断的负载均衡？
+
+14. 如何利用cgroup对进行进程分组，并调控各个group的CPU资源？
+
+15. CPU利用率和CPU负载之间的关系？CPU负载高一定用户体验差吗？
+
+   调度策略 cfs(完全公平调度)
+   负载均衡 taskset -a -p 02 16351
+    
+内存
+1.Linux系统的内存用掉了多少，还剩余多少？下面这个free命令每一个数字是什么意思？
+
+2.为什么要有DMA、NORMAL、HIGHMEM zone？每个zone的大小是由谁决定的？
+    不同硬件的dma引擎驱动有缺陷，导致乱DMAzone的存在，
+    物理内存地址不够虚拟内存内核空间一一线性映射,无法映射的那部分叫highmem zone，剩下的去掉dma zone 就是normal zone
+    每个zone大小由硬件及平台决定
+
+3.系统的内存是如何被内核和应用瓜分掉的？
+
+4.底层的内存管理算法buddy是怎么工作的？它和内核里面的slab分配器是什么关系？
+    buddy算法将内存分为2的n次方个页块分配处理(即1页、2页、4页、8页、16页等等)，释放内存时也是空闲页面也是按照2的n次方管理
+    slab只针对内核空间的(kmalloc)，slab的内存来自于buddy，slab与buddy的算法是对等的
+    
+    每一个Slab分区从Buddy拿到1页或者多页内存，并把这些内存划分为多个等分的这个结构大小的小块内存，这些Slab分区只用于分配给这个结构，\
+    通常称这个结构为object，每一次当有该object的分配请求，内核就从对应的Slab分区拿一小块内存给object，这样就实现了在同一片内存区间为频繁使用的object分配内存
+
+5.频繁的内存申请和释放是否会导致内存的碎片化？它的后果是什么？
+    buddy算法会导致内存碎片化，导致连续的空闲内存少，而dma是需要连续的空闲内存的
+
+6.Linux内存耗尽后，系统会发生怎样的情况？
+    会触发oom，kill掉最该死的进程，然后腾出内存,
+    在发生OOM的情况下，oom score越高的进程就越有可能被系统干掉，从而缓解系统的内存压力
+
+7.应用程序的内存是什么时候拿到的？malloc()成功后，是否真的拿到了内存？应用程序的malloc()与free()与内核的关系究竟是什么？
+    应用程序的内存是写的时候拿到的，在写的时候发生page fault
+    malloc（100M）成功后，用户空间没有真的拿到内存，100M虚拟地址指向同一个物理地址（0）且是只读权限
+
+    kmalloc分配的内存是基于slab的，malloc分配的内存是基于C库的，slab和C库都会对内存进行二次管理，实际到底有没有被释放，只有Slab和C库他们自己知道
+
+8.什么是lazy分配机制？应用的内存为什么会延后以最懒惰的方式拿到？
+    malloc出来的内存是只读的且全指向0页地址，只有发生写状态时发生page fault，
+    内核才会去判断，才会去申请页，改页表，去改读写权限，应用程序才会真正拿到内存，这就是lazy分配机制
+    这是防止应用程序随时犯错的处理
+
+9.我写的应用究竟耗费了多少内存？进程的vss/rss/pss/uss分别是什么概念？虚拟的，真实的，共享的，独占的，究竟哪个是哪个？
+    应用耗费多少内存主要看pss
+    vss:虚拟内存空间
+    rss:驻留在内存条上的内存
+    pss:按比例计算的驻留内存
+    uss:进程独占且驻留的内存
+
+10.内存为什么要做文件系统的缓存？如何做？缓存何时放弃？
+
+11.Free命令里面显示的buffers和cached分别是什么？二者有何区别？
+    “buffers” 表示块设备(block device)所占用的缓存页，包括：直接读写块设备、以及文件系统元数据(metadata)比如SuperBlock所使用的缓存页；
+    “cached” 表示普通文件数据占用的缓存页。
+    cached 以文件为背景的page cache
+    buffers 以裸分区为背景的 page cache 
+
+12.交换分区、虚拟内存究竟是什么鬼？它们针对的是什么性质的内存？什么是匿名页？
+
+13.进程耗费的内存、文件系统的缓存何时回收？回收的算法是不是类似LRU？
+
+14.怎样追踪和判决发生了内存泄漏？内存泄漏后如何查找泄漏源？
+    进程运行时申请的内存，在进程结束后会被全部释放。内存泄漏指的是运行的程序，随着时间的推移，占用的内存容量呈现线性增长，原因是程序中的申请和释放不成对。
+    如何监测程序是否出现了内存泄漏的情况，一方面我们可以通过smem命令，连续的在多个时间点采样，记录USS的变化情况，如果这个值在连续的很长时间里呈现出持续增长，基本就可以断定程序存在内存泄漏的情况，然后你就可以手动去程序中查找泄漏位置。
+    另一方面，如果程序代码量较大，不方便查找定位内存泄漏点，可以使用valgrind和addresssanitizer来查找程序的内存泄漏。两种方式各有优劣，valgrind在虚拟机中运行程序，所以程序运行效率下降；addresssanitizer则需要改动源码，在源码中包含sanitizer/lsan_interface.h文件，然后在需要检查内存泄漏的地方调用函数__lsan_do_leak_check。两种方式都可以定位内存泄漏的位置
+
+15.内存大小这样影响系统的性能？CPU、内存、I/O三角如何互动？它们如何综合决定系统的一些关键性能？
+   
+mmu
+io
+   libevent
+
+模块注册
+软件分层
+
+gdb调试
+   使用命令gcc –g gdb_example.c –o gdb_example编译
+   执行gdb gdb_example命令进入调试状态
+   1、list命令
+    list <linenum> ，显示程序第linenum行周围的源程序
+    list <function> ，显示函数名为function的函数的源程序
+   2、run命令
+    可以使用gdb中的run（缩写r）、break（缩写b）、next（缩写n）命令控制程序的运行，并使用print（缩写p）命令打印程序中的变量
+   3、break命令
+    break <function> 在进入指定函数时停住
+    break <linenum> 在指定行号停住。
+    break +offset / break -offset 在当前行号的前面或后面的offset行停住，offiset为自然数
+    break filename:linenum 在源文件filename的linenum行处停住。
+    break filename:function 在源文件filename的function函数的入口处停住。
+    break *address 在程序运行的内存地址处停住。
+    break break命令没有参数时，表示在下一条指令处停住。
+    break ... if <condition> condition表示条件，在条件成立时停住
+   4、单步命令
+   5、continue命令
+   6、print命令
+   7、watch命令
+   8、examine命令
+   9、set命令
+   10、jump命令
+   11、signal命令
+   12、return命令
+   13、call命令
+   14、info命令
+   15、set scheduler-locking off|on|step
+   16、disassemble
+
+   使用gdb调试段错误（segment fault）
+   $ulimit -c unlimited　　（只对当前shell进程有效）
+   ./test  ---->当前目录生成core文件
+   gdb [exec file] [core file] 如: gdb ./test test.core
+
+链表
+二叉树与红黑树
+哈希
+
