@@ -1,0 +1,115 @@
+
+mainmenu_name "Bstar DVR Configuration"
+
+mainmenu_option next_comment
+
+comment 'Platform option'
+
+choice 'Arch' \
+  "arm32 	 CONFIG_ARCH_ARM    \
+   x86_32  CONFIG_ARCH_X86"
+   
+choice 'Avchip' \
+  "HI3520    AVCHIP_3520 \
+   HI3531    AVCHIP_3531 \
+   HI3516    AVCHIP_3516 \
+   HI3516A   AVCHIP_3516A \
+   DM81xx    AVCHIP_81xx \
+   TI9G45    AVCHIP_9G45 \
+   x86_none  AVCHIP_NONE"
+endmenu
+
+#mainmenu_option next_comment
+#
+#comment 'Display option'
+#
+#choice 'Apearance' \
+#  "HD CONFIG_DFT_HD \
+#   SD CONFIG_DFT_SD"
+#endmenu
+
+mainmenu_option next_comment
+
+comment 'Product option'
+
+string 'pcid'    PCID     ""
+string 'version' VERSION  "" 
+##string 'module version' MODULE_VERSION  ""
+string 'CUUID' CUUID  "" 
+
+##int 'channel_num' CHANNEL_NUM 0
+#int 'ao_num' AO_NUM 0
+#int 'vo_num' VO_NUM 0
+## ---------------------------------------------------------------------
+#comment 'product info'
+#choice 'Info of Product' \
+#  "01_HD  CONFIG_HD_1HD  \
+#   02_HD  CONFIG_HD_2HD  \
+#   04_HD  CONFIG_HD_4HD  \
+#   08_HD  CONFIG_HD_8HD  \
+#   04_D1  CONFIG_HD_4D1  \
+#   08_D1  CONFIG_HD_8D1  \
+#   16_D1  CONFIG_HD_16D1"
+#   
+#choice 'Build special version' \
+#   "Normal          CONFIG_4_NORMAL \
+#    FiberOptic      CONFIG_4_FIBEROPTIC \
+#    Capture         CONFIG_4_CAPTURE \
+#    ElectricPanel   CONFIG_4_ELECTRICPANEL \
+#    ElectricNoPanel CONFIG_4_ELECTRICNOPANEL \
+#    FiberPanel      CONFIG_4_FIBERPANEL \
+#    FiberNoPanel    CONFIG_4_FIBERNOPANEL \
+#    OPIN3-AD        CONFIG_4_OPIN3AD \
+#    VIN16Q          CONFIG_4_VIN16Q"
+#
+#choice 'Language Choice' \
+#    "ZH_CN      CONFIG_LANGUAGE_CHINESESIMPLE \
+#     EN_GB      CONFIG_LANGUAGE_ENGLISH"
+#
+#choice 'Product Choice' \
+#  "DEC CONFIG_BUILD_DEC \
+#   ENC CONFIG_BUILD_ENC \
+#   IPC CONFIG_BUILD_IPC"
+#
+#choice 'Product Form' \
+#  "Standard CONFIG_FORM_STANDARD \
+#   Blade CONFIG_FORM_BLADE \
+#   IndoorDome CONFIG_FORM_INDOORDOME \
+#   IRBullet CONFIG_FORM_IRBULLET \
+#   Box CONFIG_FORM_BOX"
+#
+#choice 'OEM' \
+#   "None            OEM_4_NONE \
+#    HeBei           OEM_4_HEBEI \
+#    TianJin         OEM_4_TIANJIN \
+#    Loop            OEM_4_LOOP \
+#    VideoSplitter   OEM_4_VIDEOSPLITTER \
+#    VAR3S-HONUM     OEM_4_VAR3SHONUM \
+#    CICO            OEM_4_CICO"
+#
+#bool 'Build NVR' CONFIG_BUILD_NVR
+#bool 'Build VMFS' CONFIG_BUILD_VMFS
+#bool 'Build LOG' CONFIG_BUILD_LOG
+#bool 'Build ONVIF' CONFIG_BUILD_ONVIF
+#bool 'Build GB28181' CONFIG_BUILD_GB28181
+endmenu
+
+mainmenu_option next_comment
+  comment 'Upgrade option'
+  bool 'Upgrade partition boot' UPGRADE_PARTITION_BOOT 
+  bool 'Upgrade partition rootfs' UPGRADE_PARTITION_ROOTFS
+  bool 'Upgrade partition config' UPGRADE_PARTITION_CONFIG
+  bool 'Upgrade partition local' UPGRADE_PARTITION_APP
+#  bool 'Upgrade partition logo' UPGRADE_PARTITION_LOGO
+#  bool 'Upgrade partition cpld' UPGRADE_PARTITION_CPLD
+#  bool 'Upgrade partition slave' UPGRADE_PARTITION_SLAVE
+endmenu
+
+mainmenu_option next_comment
+comment 'Make option'
+
+string 'Tools chain dir' TOOLS_CHAIN_DIR ""
+string 'Root Path' CP_DIR ""
+bool 'Release Version' CONFIG_RELEASE_VERSION
+endmenu
+

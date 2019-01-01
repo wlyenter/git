@@ -1,0 +1,29 @@
+include ../.config
+include ../inc.mk
+
+SRC = $(wildcard ./src/*.c )
+OBJS = $(patsubst %c,%o,$(SRC))
+
+LIBS  = -lControl -L$(TCSLIBS_DIR) -lpthread -levent_core -levent_pthreads -lm
+
+CFLAGS +=-I../Libs/jsonrpc/inc/ -g -g3 -Wall
+
+PRO_INC = -I./inc  
+all: open_text  
+
+open_text: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LIBS) 
+	mv $@ $(RELEASE_DIR)
+
+%.o:%.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(PRO_INC)
+
+menuconfig:
+	$(MAKE) -C scripts/lxdialog all
+	/bin/bash  scripts/Menuconfig menuconfig.in
+	cp .config ../.config
+
+.PHONY:clean
+clean:
+	rm -f ./src/*.o ./scripts/lxdialog/*.o open_text 
+
