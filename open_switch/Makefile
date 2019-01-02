@@ -22,7 +22,7 @@ all:
     done
 
 menuconfig:
-	touch .config;make -C App/ menuconfig
+	touch .config;make -C Apps/ menuconfig
 
 clean:
 	for i in $(DIRS); do\

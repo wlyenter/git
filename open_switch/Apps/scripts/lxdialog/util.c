@@ -124,7 +124,7 @@ attr_clear (WINDOW * win, int height, int width, chtype attr)
 
 void dialog_clear (void)
 {
-	char *logo = "OB Telecom Electronics Co., Ltd. ";
+	char *logo = "Open Switch Co., Ltd. ";
     attr_clear (stdscr, LINES, COLS, screen_attr);
     /* Display background title if it exists ... - SLH */
     if (backtitle != NULL) {

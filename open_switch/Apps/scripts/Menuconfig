@@ -1412,7 +1412,7 @@ DIALOG="./scripts/lxdialog/lxdialog"
 
 #kernel_version="${VERSION}.${PATCHLEVEL}.${SUBLEVEL}${EXTRAVERSION}"
 
-backtitle="OB Telecom Configuration"
+backtitle="Open Switch Configuration"
 
 trap "cleanup ; exit 1" 1 2 15
 
@@ -1486,7 +1486,7 @@ then
 	save_configuration
 	echo
 	echo
-	echo "*** End of OB Telecom configuration."
+	echo "*** End of Open Switch configuration."
 	echo "*** Check the top-level Makefile for additional configuration."
 	echo "*** Next, you must run 'make'."
 	echo

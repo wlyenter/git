@@ -25,5 +25,5 @@ menuconfig:
 
 .PHONY:clean
 clean:
-	rm -f ./src/*.o ./scripts/lxdialog/*.o open_text 
+	rm -f ./src/*.o ./scripts/lxdialog/*.o ./scripts/lxdialog/lxdialog open_text 
 

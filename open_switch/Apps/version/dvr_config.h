@@ -40,8 +40,8 @@ extern C {
 /*
  * Make option
  */
-#define TOOLS_CHAIN_DIR "/home/control/work/v7.0/Hi3520_SDK_V1.0.7.0.c1"
-#define CP_DIR "/home/wuleyi/process/open_switch"
+#define TOOLS_CHAIN_DIR "/home/"
+#define CP_DIR "/home/wly/git/open_switch"
 #undef  CONFIG_RELEASE_VERSION
 
 

@@ -39,6 +39,8 @@ static int cJSON_strcasecmp(const char *s1,const char *s2)
 	return tolower(*(const unsigned char *)s1) - tolower(*(const unsigned char *)s2);
 }
 
+/* 对 void *(* func)(void *) 的理解*/
+/* func是一个 指向 形参为 void* 返回值为 void* 的函数的指针*/
 static void *(*cJSON_malloc)(size_t sz) = malloc;
 static void (*cJSON_free)(void *ptr) = free;
 
@@ -161,42 +163,84 @@ static char *print_number(cJSON *item)
 static const unsigned char firstByteMark[7] = { 0x00, 0x00, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC };
 static char **parse_string(cJSON *item, char **str)
 {
-	char *ptr=*str+1;char *ptr2;char *out;int len=0;unsigned uc,uc2;
-	if (**str!='\"') return NULL;	/* not a string! */
+    char *ptr=*str+1;  /* 跳过开头的"字符*/
+    char *ptr2;
+    char *out;
+    int len=0;
+    unsigned uc,uc2;
 
-	while (*ptr!='\"' && *ptr && ++len) if (*ptr++ == '\\') ptr++;	/* Skip escaped quotes. */
+    if (**str!='\"') 
+        return NULL;	/* not a string! */
 
+    /* 获取字符串的长度*/
+    while (*ptr!='\"' && *ptr && ++len)
+    { 
+        if (*ptr++ == '\\') 
+            ptr++;	/* Skip escaped quotes. */
+    }
+
+    /*分配字符内存空间*/
 	out=(char*)cJSON_malloc(len+1);	/* This is how long we need for the string, roughly. */
-	if (!out) return 0;
+	if (!out) 
+        return 0;
 
-	ptr=*str+1;ptr2=out;
+    /* 解析字符串 */
+	ptr=*str+1;
+    ptr2=out;
 	while (*ptr!='\"' && *ptr)
 	{
-		if (*ptr!='\\') *ptr2++=*ptr++;
+		if (*ptr!='\\') 
+        {
+            *ptr2++=*ptr++;
+        }
 		else
 		{
-			ptr++;
+			ptr++; /* 跳过转义符*/
 			switch (*ptr)
 			{
-				case 'b': *ptr2++='\b';	break;
-				case 'f': *ptr2++='\f';	break;
-				case 'n': *ptr2++='\n';	break;
-				case 'r': *ptr2++='\r';	break;
-				case 't': *ptr2++='\t';	break;
-				case 'u':	 /* transcode utf16 to utf8. */
-					sscanf(ptr+1,"%4x",&uc);ptr+=4;	/* get the unicode char. */
+				case 'b': *ptr2++='\b';	break;/* 退格 */
+				case 'f': *ptr2++='\f';	break;/* 换页 */
+				case 'n': *ptr2++='\n';	break;/* 换行 */
+				case 'r': *ptr2++='\r';	break;/* 回车 */
+				case 't': *ptr2++='\t';	break;/* 水平制表 */
+				case 'u':	 /* transcode utf16 to utf8. unicode码*/
+					sscanf(ptr+1,"%4x",&uc);
+                    ptr+=4;	/* get the unicode char. */
 
-					if ((uc>=0xDC00 && uc<=0xDFFF) || uc==0)	break;	// check for invalid.
+                    /* UTF-16 编码方式了解
+                     * Unicode 集合了全世界所有的字符定义
+                     * 其中最前面的 65536 个字符位，称为基本平面(简称 BMP)写成16进制就是从 U+0000 到 U+FFFF。
+                     * 剩下的字符都放在辅助平面(简称 SMP)，码点范围从 U+010000 到 U+10FFFF
+                     * 基本平面的字符占用 2 个字节，辅助平面的字符占用 4 个字节。
+                     * 也就是说，UTF-16 的编码长度要么是 2 个字节（U+0000 到 U+FFFF），要么是 4 个字节（U+010000 到 U+10FFFF）
+                     * 在基本平面内，从 U+D800 到 U+DFFF 是一个空段，即这些码点不对应任何字符
+                     * 辅助平面的字符位至少需要 20 个二进制位。UTF-16 将这 20 个二进制位分成两半，前 10 位映射在 U+D800 到 U+DBFF，称为高位（H），
+                     * 后 10 位映射在 U+DC00 到 U+DFFF，称为低位（L）
+                     * 当我们遇到两个字节，发现它的码点在 U+D800 到 U+DBFF 之间，后面的两个字节应该在 U+DC00 到 U+DFFF 之间，这四个字节必须放在一起解读
+                     * */
+
+					if ((uc>=0xDC00 && uc<=0xDFFF) || uc==0)	
+                        break;	// check for invalid.
 
 					if (uc>=0xD800 && uc<=0xDBFF)	// UTF16 surrogate pairs.
 					{
-						if (ptr[1]!='\\' || ptr[2]!='u')	break;	// missing second-half of surrogate.
+						if (ptr[1]!='\\' || ptr[2]!='u')	
+                            break;	// missing second-half of surrogate.
 						sscanf(ptr+3,"%4x",&uc2);ptr+=6;
-						if (uc2<0xDC00 || uc2>0xDFFF)		break;	// invalid second-half of surrogate.
+						if (uc2<0xDC00 || uc2>0xDFFF)		
+                            break;	// invalid second-half of surrogate.
 						uc=0x10000 | ((uc&0x3FF)<<10) | (uc2&0x3FF);
 					}
-
-					len=4;if (uc<0x80) len=1;else if (uc<0x800) len=2;else if (uc<0x10000) len=3; ptr2+=len;
+                    
+                    /* 根据上述unicode码的解析，赋值相应长度的字符串 */
+					len=4;
+                    if (uc<0x80) 
+                        len=1;
+                    else if (uc<0x800) 
+                        len=2;
+                    else if (uc<0x10000) 
+                        len=3; 
+                    ptr2+=len;
 
 					switch (len) {
 						case 4: *--ptr2 =((uc | 0x80) & 0xBF); uc >>= 6;
@@ -206,7 +250,10 @@ static char **parse_string(cJSON *item, char **str)
 					}
 					ptr2+=len;
 					break;
-				default:  *ptr2++=*ptr; break;
+				default:
+                    /* 直接赋值 */  
+                    *ptr2++=*ptr; 
+                    break;
 			}
 			ptr++;
 		}
@@ -278,11 +325,16 @@ static inline char **skip(char **in)
 cJSON *cJSON_Parse(const char *value)
 {
 	cJSON *c=cJSON_New_Item();
-	if (!c) return 0;       /* memory fail */
+	if (!c) 
+        return 0;       /* memory fail */
 
 	char **end_ptr = (char **)&value;
 
-	if (!parse_value(c,skip(end_ptr))) {cJSON_Delete(c);return 0;}
+	if (!parse_value(c,skip(end_ptr))) 
+    {
+        cJSON_Delete(c);
+        return 0;
+    }
 	return c;
 }
 
@@ -295,9 +347,15 @@ cJSON *cJSON_Parse_Stream(const char *value, char **end_ptr)
 	cJSON *c=cJSON_New_Item();
 	if (!c) return 0;       /* memory fail */
 
+    /* msg的值vlaue是const的不好分割操作， 拷贝一份给end_ptr*/
 	*end_ptr = (char *)value;
 
-	if (!parse_value(c,skip(end_ptr))) {cJSON_Delete(c);return 0;}
+	/* 解析json格式, 跳过空格符等符号*/
+    if (!parse_value(c,skip(end_ptr))) 
+    {
+        cJSON_Delete(c);
+        return 0;
+    }
 	return c;
 }
 
@@ -458,7 +516,8 @@ static char *print_array(cJSON *item,int depth,int fmt)
 static char **parse_object(cJSON *item, char **value)
 {
 	cJSON *child;
-	if (**value!='{')	return NULL;	/* not an object! */
+	if (**value!='{')	
+        return NULL;	/* not an object! */
 
 	item->type=cJSON_Object;
 	(*value)++;
@@ -468,12 +527,17 @@ static char **parse_object(cJSON *item, char **value)
 		return value;	/* empty object. */
 	}
 
-	item->child=child=cJSON_New_Item();
-	if (!item->child) return 0;
+    /* 新建chlid条目*/
+	item->child = child = cJSON_New_Item();
+	if (!item->child) 
+        return 0;
+    /* 解析出key值*/
 	if (!skip(parse_string(child,value)))
 		return 0;
-	child->string=child->valuestring;child->valuestring=0;
-	if (**value!=':') return NULL;	/* fail! */
+	child->string=child->valuestring;
+    child->valuestring=0;
+	if (**value!=':') 
+        return NULL;	/* fail! */
 	(*value)++;
 	if (!skip(parse_value(child,skip(value))))	/* skip any spacing, get the value. */
 		return 0;
