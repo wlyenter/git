@@ -163,7 +163,7 @@ static char *print_number(cJSON *item)
 static const unsigned char firstByteMark[7] = { 0x00, 0x00, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC };
 static char **parse_string(cJSON *item, char **str)
 {
-    char *ptr=*str+1;  /* 跳过开头的"字符*/
+    char *ptr=*str+1;  /* 跳过开头的 " 字符*/
     char *ptr2;
     char *out;
     int len=0;
@@ -187,81 +187,111 @@ static char **parse_string(cJSON *item, char **str)
     /* 解析字符串 */
 	ptr=*str+1;
     ptr2=out;
-	while (*ptr!='\"' && *ptr)
-	{
-		if (*ptr!='\\') 
+    while (*ptr!='\"' && *ptr)
+    {
+        if (*ptr!='\\') 
         {
             *ptr2++=*ptr++;
         }
-		else
-		{
-			ptr++; /* 跳过转义符*/
-			switch (*ptr)
-			{
-				case 'b': *ptr2++='\b';	break;/* 退格 */
-				case 'f': *ptr2++='\f';	break;/* 换页 */
-				case 'n': *ptr2++='\n';	break;/* 换行 */
-				case 'r': *ptr2++='\r';	break;/* 回车 */
-				case 't': *ptr2++='\t';	break;/* 水平制表 */
-				case 'u':	 /* transcode utf16 to utf8. unicode码*/
-					sscanf(ptr+1,"%4x",&uc);
-                    ptr+=4;	/* get the unicode char. */
+        else
+        {
+            ptr++; /* 跳过转义符*/
+            switch (*ptr)
+            {
+                case 'b': *ptr2++='\b';	break;/* 退格 */
+                case 'f': *ptr2++='\f';	break;/* 换页 */
+                case 'n': *ptr2++='\n';	break;/* 换行 */
+                case 'r': *ptr2++='\r';	break;/* 回车 */
+                case 't': *ptr2++='\t';	break;/* 水平制表 */
+                case 'u':	 /* transcode utf16 to utf8. unicode码解码*/
+                          sscanf(ptr+1,"%4x",&uc);
+                          ptr+=4;	/* get the unicode char. */
 
-                    /* UTF-16 编码方式了解
-                     * Unicode 集合了全世界所有的字符定义
-                     * 其中最前面的 65536 个字符位，称为基本平面(简称 BMP)写成16进制就是从 U+0000 到 U+FFFF。
-                     * 剩下的字符都放在辅助平面(简称 SMP)，码点范围从 U+010000 到 U+10FFFF
-                     * 基本平面的字符占用 2 个字节，辅助平面的字符占用 4 个字节。
-                     * 也就是说，UTF-16 的编码长度要么是 2 个字节（U+0000 到 U+FFFF），要么是 4 个字节（U+010000 到 U+10FFFF）
-                     * 在基本平面内，从 U+D800 到 U+DFFF 是一个空段，即这些码点不对应任何字符
-                     * 辅助平面的字符位至少需要 20 个二进制位。UTF-16 将这 20 个二进制位分成两半，前 10 位映射在 U+D800 到 U+DBFF，称为高位（H），
-                     * 后 10 位映射在 U+DC00 到 U+DFFF，称为低位（L）
-                     * 当我们遇到两个字节，发现它的码点在 U+D800 到 U+DBFF 之间，后面的两个字节应该在 U+DC00 到 U+DFFF 之间，这四个字节必须放在一起解读
-                     * */
+                          /* UTF-16 编码方式了解
+                           * Unicode 集合了全世界所有的字符定义
+                           * 其中最前面的 65536 个字符位，称为基本平面(简称 BMP)写成16进制就是从 U+0000 到 U+FFFF。
+                           * 剩下的字符都放在辅助平面(简称 SMP)，码点范围从 U+010000 到 U+10FFFF
+                           * 基本平面的字符占用 2 个字节，辅助平面的字符占用 4 个字节。
+                           * 也就是说，UTF-16 的编码长度要么是 2 个字节（U+0000 到 U+FFFF），要么是 4 个字节（U+010000 到 U+10FFFF）
+                           * 在基本平面内，从 U+D800 到 U+DFFF 是一个空段，即这些码点不对应任何字符
+                           * 辅助平面的字符位至少需要 20 个二进制位。UTF-16 将这 20 个二进制位分成两半，
+                           * 前 10 位映射在 U+D800 到 U+DBFF, 称为高位(H)，
+                           * 后 10 位映射在 U+DC00 到 U+DFFF，称为低位（L）
+                           * 当我们遇到两个字节，发现它的码点在 U+D800 到 U+DBFF 之间，后面的两个字节应该在 U+DC00 到 U+DFFF 之间，
+                           * 这四个字节必须放在一起解读
+                           * */
 
-					if ((uc>=0xDC00 && uc<=0xDFFF) || uc==0)	
-                        break;	// check for invalid.
+                          if ((uc>=0xDC00 && uc<=0xDFFF) || uc==0)	
+                              break;	// check for invalid.
 
-					if (uc>=0xD800 && uc<=0xDBFF)	// UTF16 surrogate pairs.
-					{
-						if (ptr[1]!='\\' || ptr[2]!='u')	
-                            break;	// missing second-half of surrogate.
-						sscanf(ptr+3,"%4x",&uc2);ptr+=6;
-						if (uc2<0xDC00 || uc2>0xDFFF)		
-                            break;	// invalid second-half of surrogate.
-						uc=0x10000 | ((uc&0x3FF)<<10) | (uc2&0x3FF);
-					}
-                    
-                    /* 根据上述unicode码的解析，赋值相应长度的字符串 */
-					len=4;
-                    if (uc<0x80) 
-                        len=1;
-                    else if (uc<0x800) 
-                        len=2;
-                    else if (uc<0x10000) 
-                        len=3; 
-                    ptr2+=len;
+                          if (uc>=0xD800 && uc<=0xDBFF)	// UTF16 surrogate pairs.
+                          {
+                              if (ptr[1]!='\\' || ptr[2]!='u')	
+                                  break;	// missing second-half of surrogate.
+                              sscanf(ptr+3,"%4x",&uc2);ptr+=6;
+                              if (uc2<0xDC00 || uc2>0xDFFF)		
+                                  break;	// invalid second-half of surrogate.
+                              uc=0x10000 | ((uc&0x3FF)<<10) | (uc2&0x3FF);
+                          }
 
-					switch (len) {
-						case 4: *--ptr2 =((uc | 0x80) & 0xBF); uc >>= 6;
-						case 3: *--ptr2 =((uc | 0x80) & 0xBF); uc >>= 6;
-						case 2: *--ptr2 =((uc | 0x80) & 0xBF); uc >>= 6;
-						case 1: *--ptr2 =(uc | firstByteMark[len]);
-					}
-					ptr2+=len;
-					break;
-				default:
-                    /* 直接赋值 */  
-                    *ptr2++=*ptr; 
-                    break;
-			}
-			ptr++;
-		}
-	}
+                          /**
+                           *utf-8的unicode编码规则如下：
+                           *Unicode 十六进制码点范围   UTF-8 二进制
+                           *0000 0000 - 0000 007F      0xxxxxxx
+                           *0000 0080 - 0000 07FF      110xxxxx 10xxxxxx
+                           *0000 0800 - 0000 FFFF      1110xxxx 10xxxxxx 10xxxxxx
+                           *0001 0000 - 0010 FFFF      11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+
+                           *例:"汉"的 Unicode 码点是 0x6c49（110 1100 0100 1001）
+                           *，通过上面的对照表可以发现，0x0000 6c49 位于第三行的范围，
+                           *那么得出其格式为 1110xxxx 10xxxxxx 10xxxxxx。
+                           *接着，从“汉”的二进制数最后一位开始
+                           *，从后向前依次填充对应格式中的 x，多出的 x 用 0 补上。
+                           *这样，就得到了“汉”的 UTF-8 编码为 11100110 10110001 10001001，转换成十六进制就是 0xE6 0xB7 0x89。
+
+                           *解码的过程也十分简单：
+                           *如果一个字节的第一位是 0 ，则说明这个字节对应一个字符；
+                           *如果一个字节的第一位1，那么连续有多少个 1，就表示该字符占用多少个字节。
+                           ***/
+
+                          /* 根据上述unicode码的解析，赋值相应长度的字符串 */
+                          len=4;
+                          if (uc<0x80) 
+                              len=1;
+                          else if (uc<0x800) 
+                              len=2;
+                          else if (uc<0x10000) 
+                              len=3; 
+                          ptr2+=len;
+
+                          switch (len) {
+                              case 4: *--ptr2 =((uc | 0x80) & 0xBF); uc >>= 6;
+                              case 3: *--ptr2 =((uc | 0x80) & 0xBF); uc >>= 6;
+                              case 2: *--ptr2 =((uc | 0x80) & 0xBF); uc >>= 6;
+                              case 1: *--ptr2 =(uc | firstByteMark[len]);
+                          }
+                          ptr2+=len;
+                          break;
+                default:
+                          /* 直接赋值 */  
+                          *ptr2++=*ptr; 
+                          break;
+            }
+            /* 执行完转义符后的字节后，进行加一操作 */
+            ptr++;
+        }
+    }
+
+    /* 字符串最后一个字节赋零*/
 	*ptr2=0;
-	if (*ptr=='\"') ptr++;
+	if (*ptr=='\"') 
+        ptr++;
+
+    /* 赋值解析出来的字符串值及类型*/
 	item->valuestring=out;
 	item->type=cJSON_String;
+
+    /* 返回剩下的字符串*/
 	*str = ptr;
 	return str;
 }
@@ -519,7 +549,9 @@ static char **parse_object(cJSON *item, char **value)
 	if (**value!='{')	
         return NULL;	/* not an object! */
 
+    /* 赋值json-object格式类型 */
 	item->type=cJSON_Object;
+    /* 跳过第一个字符{ */
 	(*value)++;
 	skip(value);
 	if (**value=='}') {
@@ -531,19 +563,22 @@ static char **parse_object(cJSON *item, char **value)
 	item->child = child = cJSON_New_Item();
 	if (!item->child) 
         return 0;
-    /* 解析出key值*/
+    /* 解析出json的key的名称，放入child条目中*/
 	if (!skip(parse_string(child,value)))
 		return 0;
+    /* 将key的名称放在string(名称专属)上*/
 	child->string=child->valuestring;
     child->valuestring=0;
 	if (**value!=':') 
         return NULL;	/* fail! */
 	(*value)++;
+    /* 解析出key的对应value值，放在child的valuestring上*/
 	if (!skip(parse_value(child,skip(value))))	/* skip any spacing, get the value. */
 		return 0;
 
 	while (**value==',')
 	{
+        /*跳过 , 字符*/
 		(*value)++;
 		skip(value);
 
@@ -553,13 +588,25 @@ static char **parse_object(cJSON *item, char **value)
 		}
 
 		cJSON *new_item;
-		if (!(new_item=cJSON_New_Item()))	return 0; /* memory fail */
-		child->next=new_item;new_item->prev=child;child=new_item;
+		if (!(new_item=cJSON_New_Item()))	
+            return 0; /* memory fail */
+
+        /* 连接节点 */
+		child->next=new_item;
+        new_item->prev=child;
+
+        child=new_item;
+
+        /* 解析新一条的json对象的key值 */
 		if (!skip(parse_string(child,value)))
 			return 0;
-		child->string=child->valuestring;child->valuestring=0;
-		if (**value!=':') return NULL;	/* fail! */
+		child->string=child->valuestring;
+        child->valuestring=0;
+
+		if (**value!=':') 
+            return NULL;	/* fail! */
 		(*value)++;
+        /* 获取对应的value值 */
 		if (!skip(parse_value(child,skip(value))))	/* skip any spacing, get the value. */
 			return 0;
 	}
