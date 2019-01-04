@@ -93,7 +93,8 @@ void cJSON_Delete(cJSON *c)
 /* Parse the input text to generate a number, and populate the result into item. */
 static char **parse_number(cJSON *item, char **num)
 {
-	double n=0,sign=1,scale=0;int subscale=0,signsubscale=1;
+	double n=0,sign=1,scale=0;
+    int subscale=0,signsubscale=1;
 
 	if (**num=='-') {	/* Has sign? */
 		sign = -1;
@@ -434,7 +435,8 @@ static char **parse_value(cJSON *item, char **value)
 static char *print_value(cJSON *item,int depth,int fmt)
 {
 	char *out=0;
-	if (!item) return 0;
+	if (!item) 
+        return 0;
 	switch ((item->type)&255)
 	{
 		case cJSON_NULL:	out=cJSON_strdup("null");	break;
@@ -621,59 +623,107 @@ static char **parse_object(cJSON *item, char **value)
 /* Render an object to text. */
 static char *print_object(cJSON *item,int depth,int fmt)
 {
-	char **entries=0,**names=0;
-	char *out=0,*ptr,*ret,*str;int len=7,i=0,j;
-	cJSON *child=item->child;
-	int numentries=0,fail=0;
-	/* Count the number of entries. */
-	while (child) numentries++,child=child->next;
-	/* Allocate space for the names and the objects */
-	entries=(char**)cJSON_malloc(numentries*sizeof(char*));
-	if (!entries) return 0;
-	names=(char**)cJSON_malloc(numentries*sizeof(char*));
-	if (!names) {cJSON_free(entries);return 0;}
-	memset(entries,0,sizeof(char*)*numentries);
-	memset(names,0,sizeof(char*)*numentries);
+    char **entries=0,**names=0;
+    char *out=0,*ptr,*ret,*str;
+    /* len = 7预留了大括号换行的位置*/
+    int len=7,i=0,j;
+    cJSON *child=item->child;
+    int numentries=0,fail=0;
 
-	/* Collect all the results into our arrays: */
-	child=item->child;depth++;if (fmt) len+=depth;
-	while (child)
-	{
-		names[i]=str=print_string_ptr(child->string);
-		entries[i++]=ret=print_value(child,depth,fmt);
-		if (str && ret) len+=strlen(ret)+strlen(str)+2+(fmt?2+depth:0); else fail=1;
-		child=child->next;
-	}
+    /* Count the number of entries. */
+    while (child)
+    { 
+        numentries++;
+        child=child->next;
+    }
+    /* Allocate space for the names and the objects */
+    entries=(char**)cJSON_malloc(numentries*sizeof(char*));
+    if (!entries) 
+        return 0;
+    names=(char**)cJSON_malloc(numentries*sizeof(char*));
+    if (!names) 
+    {
+        cJSON_free(entries);
+        return 0;
+    }
+    memset(entries,0,sizeof(char*)*numentries);
+    memset(names,0,sizeof(char*)*numentries);
 
-	/* Try to allocate the output string */
-	if (!fail) out=(char*)cJSON_malloc(len);
-	if (!out) fail=1;
+    /* Collect all the results into our arrays: */
+    child=item->child;
+    depth++;
+    if (fmt) 
+        len+=depth;
+    while (child)
+    {
+        /* 获取相应的key跟value值*/
+        names[i]=str=print_string_ptr(child->string);
+        entries[i++]=ret=print_value(child,depth,fmt);
+        if (str && ret) 
+            len+=strlen(ret)+strlen(str)+2+(fmt?2+depth:0); 
+        else 
+            fail=1;
+        child=child->next;
+    }
 
-	/* Handle failure */
-	if (fail)
-	{
-		for (i=0;i<numentries;i++) {if (names[i]) cJSON_free(names[i]);if (entries[i]) cJSON_free(entries[i]);}
-		cJSON_free(names);cJSON_free(entries);
-		return 0;
-	}
+    /* Try to allocate the output string */
+    if (!fail) 
+        out=(char*)cJSON_malloc(len);
+    if (!out) 
+        fail=1;
 
-	/* Compose the output: */
-	*out='{';ptr=out+1;if (fmt)*ptr++='\n';*ptr=0;
-	for (i=0;i<numentries;i++)
-	{
-		if (fmt) for (j=0;j<depth;j++) *ptr++='\t';
-		strcpy(ptr,names[i]);ptr+=strlen(names[i]);
-		*ptr++=':';if (fmt) *ptr++='\t';
-		strcpy(ptr,entries[i]);ptr+=strlen(entries[i]);
-		if (i!=numentries-1) *ptr++=',';
-		if (fmt) *ptr++='\n';*ptr=0;
-		cJSON_free(names[i]);cJSON_free(entries[i]);
-	}
+    /* Handle failure */
+    if (fail)
+    {
+        for (i=0;i<numentries;i++) 
+        {
+            if (names[i]) 
+                cJSON_free(names[i]);
+            if (entries[i]) 
+                cJSON_free(entries[i]);
+        }
+        cJSON_free(names);
+        cJSON_free(entries);
+        return 0;
+    }
 
-	cJSON_free(names);cJSON_free(entries);
-	if (fmt) for (i=0;i<depth-1;i++) *ptr++='\t';
-	*ptr++='}';*ptr++=0;
-	return out;
+    /* Compose the output: */
+    *out='{';
+    ptr=out+1;
+    if (fmt)
+        *ptr++='\n';
+    *ptr=0;
+    for (i=0;i<numentries;i++)
+    {
+        if (fmt) 
+        {
+            for (j=0;j<depth;j++) 
+                *ptr++='\t';
+        }
+        strcpy(ptr,names[i]);
+        ptr+=strlen(names[i]);
+        *ptr++=':';
+        if (fmt) 
+            *ptr++='\t';
+        strcpy(ptr,entries[i]);
+        ptr+=strlen(entries[i]);
+        if (i!=numentries-1) 
+            *ptr++=',';
+        if (fmt) 
+            *ptr++='\n';
+        *ptr=0;
+        cJSON_free(names[i]);
+        cJSON_free(entries[i]);
+    }
+
+    cJSON_free(names);
+    cJSON_free(entries);
+    if (fmt) 
+        for (i=0;i<depth-1;i++) 
+            *ptr++='\t';
+    *ptr++='}';
+    *ptr++=0;
+    return out;
 }
 
 /* Get Array size/item / object item. */

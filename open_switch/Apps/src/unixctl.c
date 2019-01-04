@@ -25,6 +25,139 @@
 
 VLOG_DEFINE_THIS_MODULE(unixctl);
 
+/*
+ *
+ * http://www.jsonrpc.org/specification
+ *
+ * code message meaning
+ * -32700   Parse error Invalid JSON was received by the server.
+ *          An error occurred on the server while parsing the JSON text.
+ * -32600   Invalid Request The JSON sent is not a valid Request object.
+ * -32601   Method not found    The method does not exist / is not available.
+ * -32602   Invalid params  Invalid method parameter(s).
+ * -32603   Internal error  Internal JSON-RPC error.
+ * -32000 to -32099 Server error    Reserved for implementation-defined server-errors.
+ */
+
+#define JRPC_PARSE_ERROR      -32700
+#define JRPC_INVALID_REQUEST  -32600
+#define JRPC_METHOD_NOT_FOUND -32601
+#define JRPC_INVALID_PARAMS   -32603
+#define JRPC_INTERNAL_ERROR   -32693
+
+#if 0
+static int json_send_response(struct jrpc_connection * conn, char *response) {
+    int fd = conn->fd;
+    if (conn->debug_level > 1)
+        printf("JSON Response:\n%s\n", response);
+    write(fd, response, strlen(response));
+    write(fd, "\n", 1);
+    return 0;
+}
+#else
+static int json_send_response(struct bufferevent *bev,  char *response) 
+{
+    VLOG_DBG("JSON Response:\n%s\n", response);
+    bufferevent_write(bev, response, strlen(response));
+    return 0;
+}
+
+#endif
+
+static int json_send_error(struct bufferevent *bev, int code, char* message, cJSON * id) 
+{
+    int return_value = 0;
+    cJSON *result_root = cJSON_CreateObject();
+    cJSON *error_root = cJSON_CreateObject();
+    cJSON_AddNumberToObject(error_root, "code", code);
+    cJSON_AddStringToObject(error_root, "message", message);
+    cJSON_AddItemToObject(result_root, "error", error_root);
+    cJSON_AddItemToObject(result_root, "id", id);
+    char * str_result = cJSON_Print(result_root);
+    return_value = json_send_response(bev, str_result);
+    free(str_result);
+    cJSON_Delete(result_root);
+    free(message);
+    return return_value;
+}
+
+static int json_send_result(struct bufferevent *bev, cJSON * result, cJSON * id) 
+{
+    int return_value = 0;
+    cJSON *result_root = cJSON_CreateObject();
+    if (result)
+        cJSON_AddItemToObject(result_root, "result", result);
+    cJSON_AddItemToObject(result_root, "id", id);
+
+    char * str_result = cJSON_Print(result_root);
+    return_value = json_send_response(bev, str_result);
+    free(str_result);
+    cJSON_Delete(result_root);
+    return return_value;
+}
+
+static int json_invoke_procedure(struct bufferevent *bev, char *name, cJSON *params, cJSON *id) 
+{
+    cJSON *returned = NULL;
+    int procedure_found = 0;
+#if 0
+    jrpc_context ctx;
+    ctx.error_code = 0;
+    ctx.error_message = NULL;
+    /* 查找命令 并执行回调函数*/
+    int i = server->procedure_count;
+    while (i--) {
+        if (!strcmp(server->procedures[i].name, name)) {
+            procedure_found = 1;
+            ctx.data = server->procedures[i].data;
+            returned = server->procedures[i].function(&ctx, params, id);
+            break;
+        }
+    }
+#endif
+
+    if (!procedure_found)
+        return json_send_error(bev, JRPC_METHOD_NOT_FOUND, strdup("Method not found."), id);
+#if 0
+    else {
+        if (ctx.error_code)
+            return json_send_error(bev, ctx.error_code, ctx.error_message, id);
+        else
+            return json_send_result(bev, returned, id);
+    }
+#endif
+    return 0;
+}
+
+static int json_eval_request(struct bufferevent *bev, cJSON *root) 
+{
+    cJSON *method, *params, *id;
+    /* 获取 method 条目*/
+    method = cJSON_GetObjectItem(root, "method");
+    if (method != NULL && method->type == cJSON_String) {
+        /* 获取 params 条目*/
+        params = cJSON_GetObjectItem(root, "params");
+        if (params == NULL|| params->type == cJSON_Array || params->type == cJSON_Object) 
+        {
+            /* 获取 id 条目*/
+            id = cJSON_GetObjectItem(root, "id");
+            if (id == NULL|| id->type == cJSON_String || id->type == cJSON_Number) 
+            {
+                //We have to copy ID because using it on the reply and deleting the response Object will also delete ID
+                cJSON * id_copy = NULL;
+                if (id != NULL)
+                    id_copy = (id->type == cJSON_String) ? cJSON_CreateString(id->valuestring) :
+                        cJSON_CreateNumber(id->valueint);
+                VLOG_DBG("Method Invoked: %s\n", method->valuestring);
+                return json_invoke_procedure(bev,  method->valuestring, params, id_copy);
+            }
+        }
+    }
+    json_send_error(bev, JRPC_INVALID_REQUEST, strdup("The JSON sent is not a valid Request object."), NULL);
+    return -1;
+}
+
+
 /**< 读操作的回调函数具体实现*/
 void unix_read_cb(struct bufferevent *bev, void *arg)
 {
@@ -34,8 +167,8 @@ void unix_read_cb(struct bufferevent *bev, void *arg)
 
     msg[len] = '\0';
     VLOG_INFO("rcv data : %s", msg);
-    char reply[] = "I has read your data";  
-    bufferevent_write(bev, reply, strlen(reply) );
+    //char reply[] = "I has read your data";  
+    //bufferevent_write(bev, reply, strlen(reply) );
 
     /**< 1.创建一个关联的jsonrpc对象*/
     struct jsonrpc* rpc = jsonrpc_open();
@@ -54,13 +187,26 @@ void unix_read_cb(struct bufferevent *bev, void *arg)
     cJSON *root;
     char *end_ptr = NULL;
 
-    if ((root = cJSON_Parse_Stream(msg, &end_ptr)) != NULL) {
+    if ((root = cJSON_Parse_Stream(msg, &end_ptr)) != NULL) 
+    {
         char * str_result = cJSON_Print(root);
         printf("Valid JSON Received:\n%s\n", str_result);
         free(str_result);
-    }
-    
+        if (root->type == cJSON_Object) {
+            json_eval_request(bev, root);
+        }
 
+        cJSON_Delete(root);
+    }
+    else 
+    {
+        // did we parse the all buffer? If so, just wait for more.
+        // else there was an error before the buffer's end
+        VLOG_WARN("INVALID JSON Received:\n---\n%s\n---\n",msg);
+        json_send_error(bev, JRPC_PARSE_ERROR,
+                   strdup("Parse error. Invalid JSON was received by the server."),
+                   NULL);
+    }
 
     /**< 4.消息类型处理*/
     /**< 5.查找命令对象并调用回调函数*/
