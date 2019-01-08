@@ -33,6 +33,8 @@ void _vlog_init(void)
  * */
 void vlog_insert_module(struct list_head* node)
 {
+    /**< 判断有没有存在*/
+
     list_add(node, &vlog_module);
 }
 

@@ -14,12 +14,12 @@ CFLAGS += -g -Wall
 #export ARCH_PATH
 
 LDFLAGS =  -lpthread -lm
-CFLAGS+= -I../../Apps/inc/ -I./inc $(EXTCFLAGS) -g  -Wall
+CFLAGS+= -I../../Apps/inc/ -I../jsonrpc/inc/ -I./inc $(EXTCFLAGS) -g  -Wall
 #got all .o files in .c source dir
 SRC_DIRS = ./src 
 SOURCES = $(foreach dir,$(SRC_DIRS), $(wildcard $(dir)/*.c))
 OBJS = $(SOURCES:.c=.o)
-TARGET = libJsonrpc.a 
+TARGET = libHash.a 
 
 #.PHONY: $(TARGET)
 

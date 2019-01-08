@@ -4,9 +4,9 @@ include ../inc.mk
 SRC = $(wildcard ./src/*.c )
 OBJS = $(patsubst %c,%o,$(SRC))
 
-LIBS  = -lControl -L$(TCSLIBS_DIR) -lpthread -levent_core -levent_pthreads -lm
+LIBS  = -lJsonrpc -lHash -L$(TCSLIBS_DIR) -lpthread -levent_core -levent_pthreads -lm
 
-CFLAGS +=-I../Libs/jsonrpc/inc/ -g -g3 -Wall
+CFLAGS +=-I../Libs/jsonrpc/inc/ -I../Libs/hash/inc -g -g3 -Wall
 
 PRO_INC = -I./inc  
 all: open_text  

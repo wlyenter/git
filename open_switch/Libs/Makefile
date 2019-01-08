@@ -4,7 +4,7 @@ include ../inc.mk
 export CC
 export AR
 
-DIRS = jsonrpc
+DIRS = jsonrpc hash
 
 all:
 	for i in $(DIRS); do \

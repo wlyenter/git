@@ -38,5 +38,6 @@
 #include "jsonrpc.h"
 #include "cJSON.h"
 
+#include "unixctl.h"
 #endif
 

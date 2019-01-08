@@ -130,13 +130,13 @@ enum vlog_level {
  * ##__VA_ARGS__ 宏前面加上##的作用在于，当可变参数的个数为0时，这里的##起到把前面多余的","去掉的作用,否则会编译出错
  * */
 
-#define VLOG_ERR(fmt,...)   VLOG(VLL_ERR,"\033[0;31m%s|[%s][%d]: "fmt"\033[0m\n",\
+#define VLOG_ERR(fmt,...)   VLOG(VLL_ERR, "\033[0;31m[   ERROR] %8s\\ [%10s]|[%5d]: "fmt"\033[0m\n",\
                                  this_module.name,__func__,__LINE__, ## __VA_ARGS__)
-#define VLOG_WARN(fmt,...)  VLOG(VLL_WARN,"\033[1;31m%s|[%s][%d]: "fmt"\033[0m\n",\
+#define VLOG_WARN(fmt,...)  VLOG(VLL_WARN,"\033[1;31m[ WARNING] %8s\\ [%10s]|[%5d]: "fmt"\033[0m\n",\
                                  this_module.name,__func__,__LINE__, ## __VA_ARGS__)
-#define VLOG_INFO(fmt,...)  VLOG(VLL_INFO,"\033[1;32m%s|[%s][%d]: "fmt"\033[0m\n",\
+#define VLOG_INFO(fmt,...)  VLOG(VLL_INFO,"\033[1;32m[    INFO] %8s\\ [%10s]|[%5d]: "fmt"\033[0m\n",\
                                  this_module.name,__func__,__LINE__, ## __VA_ARGS__)
-#define VLOG_DBG(fmt,...)   VLOG(VLL_DBG,"\033[1;33m%s|[%s][%d]: "fmt"\033[0m\n",\
+#define VLOG_DBG(fmt,...)   VLOG(VLL_DBG, "\033[1;33m[   DEBUG] %8s\\ [%10s]|[%5d]: "fmt"\033[0m\n",\
                                  this_module.name,__func__,__LINE__, ## __VA_ARGS__)
 
 #define VLOG(LEVEL,fmt,...)                          \

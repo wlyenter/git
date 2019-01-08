@@ -23,7 +23,19 @@
 #include <event2/bufferevent.h>
 #include <event2/buffer.h>
 
+#include "shash.h"
+
 VLOG_DEFINE_THIS_MODULE(unixctl);
+
+/**< unixctl的命令描述*/
+struct unixctl_command {
+    char* name;                 /**< 命令的名称 */
+    int min_args, max_args;     /**< 命令支持的最小/最大参数 */
+    unixctl_cb_func* cb;        /**< 收到该命令后执行的回调函数 */
+    void* aux;                  /**< 回调函数的参数 */
+};
+
+static struct shash commands = SHASH_INITIALIZER(&commands); /**< 初始化一张哈希表*/
 
 /*
  *
@@ -45,24 +57,12 @@ VLOG_DEFINE_THIS_MODULE(unixctl);
 #define JRPC_INVALID_PARAMS   -32603
 #define JRPC_INTERNAL_ERROR   -32693
 
-#if 0
-static int json_send_response(struct jrpc_connection * conn, char *response) {
-    int fd = conn->fd;
-    if (conn->debug_level > 1)
-        printf("JSON Response:\n%s\n", response);
-    write(fd, response, strlen(response));
-    write(fd, "\n", 1);
-    return 0;
-}
-#else
 static int json_send_response(struct bufferevent *bev,  char *response) 
 {
     VLOG_DBG("JSON Response:\n%s\n", response);
     bufferevent_write(bev, response, strlen(response));
     return 0;
 }
-
-#endif
 
 static int json_send_error(struct bufferevent *bev, int code, char* message, cJSON * id) 
 {
@@ -115,6 +115,12 @@ static int json_invoke_procedure(struct bufferevent *bev, char *name, cJSON *par
         }
     }
 #endif
+    struct unixctl_command *command = shash_find_data(&commands, name);
+    if(command)
+    {
+        procedure_found = 1;
+        command->cb(bev, 0, NULL, NULL);    
+    }
 
     if (!procedure_found)
         return json_send_error(bev, JRPC_METHOD_NOT_FOUND, strdup("Method not found."), id);
@@ -306,5 +312,39 @@ void unix_server_create()
 
 
 /**< 初始化*/
+
+/* Register a unixctl command
+ * @name        command name
+ * @min_args    min args this command support
+ * @max_args    max args this command support
+ * @cb          callback func when recv this command
+ * @aux         arg for cb
+ * */
+void unixctl_command_register(const char* name, int min_args, int max_args, unixctl_cb_func *cb, void* aux)
+{
+    struct unixctl_command* command = calloc(1, sizeof(struct unixctl_command));
+    if(!command){
+        VLOG_ERR("Fail to allocate unixctl command: %s",strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    /**< 判断哈希表里有没有信息注册*/
+    struct unixctl_command* lookup = shash_find_data(&commands, name);
+    if(lookup){
+        return;
+    }
+
+    command->name = strdup(name);
+    command->min_args = min_args;
+    command->max_args = max_args;
+    command->cb = cb;
+    command->aux = aux;
+
+    /**< 加入哈希表*/
+    shash_add(&commands, name, command);
+
+}
+
+
+
 
 
