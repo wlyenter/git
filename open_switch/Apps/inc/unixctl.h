@@ -18,8 +18,13 @@
 #ifndef __UNIXCTL_H
 #define __UNIXCTL_H
 
+typedef struct{
+    int error_code;
+    char* error_message;
+}jrpc_context;
+
 struct bufferevent;
-typedef void unixctl_cb_func(struct bufferevent *bev, int argc, const char* argv[], void* aux); 
+typedef cJSON* unixctl_cb_func(struct bufferevent *bev, cJSON* param, cJSON* ip); 
 
 
 #endif

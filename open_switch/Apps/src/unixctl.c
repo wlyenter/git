@@ -27,6 +27,7 @@
 
 VLOG_DEFINE_THIS_MODULE(unixctl);
 
+
 /**< unixctl的命令描述*/
 struct unixctl_command {
     char* name;                 /**< 命令的名称 */
@@ -100,10 +101,11 @@ static int json_invoke_procedure(struct bufferevent *bev, char *name, cJSON *par
 {
     cJSON *returned = NULL;
     int procedure_found = 0;
-#if 0
+
     jrpc_context ctx;
     ctx.error_code = 0;
     ctx.error_message = NULL;
+#if 0
     /* 查找命令 并执行回调函数*/
     int i = server->procedure_count;
     while (i--) {
@@ -119,19 +121,17 @@ static int json_invoke_procedure(struct bufferevent *bev, char *name, cJSON *par
     if(command)
     {
         procedure_found = 1;
-        command->cb(bev, 0, NULL, NULL);    
+        returned = command->cb(bev, params, id);    
     }
 
     if (!procedure_found)
         return json_send_error(bev, JRPC_METHOD_NOT_FOUND, strdup("Method not found."), id);
-#if 0
     else {
         if (ctx.error_code)
             return json_send_error(bev, ctx.error_code, ctx.error_message, id);
         else
             return json_send_result(bev, returned, id);
     }
-#endif
     return 0;
 }
 
@@ -161,6 +161,11 @@ static int json_eval_request(struct bufferevent *bev, cJSON *root)
     }
     json_send_error(bev, JRPC_INVALID_REQUEST, strdup("The JSON sent is not a valid Request object."), NULL);
     return -1;
+}
+
+cJSON* unixctl_list_command(struct bufferevent *bev, cJSON *params, cJSON *id)
+{
+    return cJSON_CreateString("list!");   
 }
 
 
@@ -275,6 +280,8 @@ void unix_server_create()
     local.sin_family = AF_INET;
     local.sin_port = htons(8000);
     local.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    unixctl_command_register("list", 0, 0, unixctl_list_command, NULL);
 
     /**< 函数分配且返回一个具有默认配置的event_base*/
     struct event_base *base = event_base_new();
