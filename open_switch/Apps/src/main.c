@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
     VLOG_INFO("hello");
     VLOG_DBG("hello");
     /**< unix/tcp 初始化*/
-    unix_server_create();
+    unixctl_server_create();
 
     exit(EXIT_SUCCESS);
 }

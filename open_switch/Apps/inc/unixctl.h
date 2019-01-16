@@ -23,8 +23,9 @@ typedef struct{
     char* error_message;
 }jrpc_context;
 
-struct bufferevent;
-typedef cJSON* unixctl_cb_func(struct bufferevent *bev, cJSON* param, cJSON* ip); 
-
+typedef cJSON* unixctl_cb_func(jrpc_context *ctx, int argc, const char* argv[], void* aux); 
+void unixctl_server_create();
+void unixctl_command_register(const char* name, const char* usage, int min_args, int max_args, 
+                              unixctl_cb_func *cb, void* aux);
 
 #endif
