@@ -15,7 +15,7 @@ AR = ar
 
 ARCH_PATH = $(CP_DIR)/release/arch_arm
 AVCHIP_PATH = 9G45
-TCSLIBS_DIR = $(ARCH_PATH)/lib/$(AVCHIP_PATH)/
+TCSLIBS_DIR = $(ARCH_PATH)/lib/
 export BUILD_VERSION
 export BUILD_TIME
 export CHANNEL_NUM

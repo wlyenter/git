@@ -11,7 +11,7 @@ CC = gcc
 export RELEASE_DIR
 export CC
 
-DIRS = Libs Apps 
+DIRS = Libs Apps cli
 all:
 	@if [ ! -d $(RELEASE_DIR) ]; then \
 		echo "Ger RELEASE_DIR = "$(RELEASE_DIR); \
